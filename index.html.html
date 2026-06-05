@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CAPSULE 1 — TCF &amp; TEF avec Shekinah Orielle</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght=400;600;700;800;900&family=DM+Sans:wght=400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --rouge:  #D42B2B;
+  --bleu:   #1A6BB5;
+  --marine: #1B2D5B;
+  --vert:   #2E9E56;
+  --bg:      #0D0F1A;
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --white:  #FFFFFF;
+  --text-muted: rgba(255, 255, 255, 0.6);
+  --border: rgba(255, 255, 255, 0.1);
+}
+
+body.light-theme {
+  --bg: #F4F6F9;
+  --card-bg: #FFFFFF;
+  --white: #111424;
+  --text-muted: #4A5568;
+  --border: rgba(0, 0, 0, 0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100dvh;
+  overflow: hidden; background: var(--bg);
+  font-family: 'DM Sans', sans-serif; color: var(--white);
+  transition: background 0.3s, color 0.3s;
+}
+
+/* ── SCENES (PREND TOUT L'ÉCRAN) ── */
+.scene {
+  position: absolute; inset: 0;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s ease;
+  padding: 60px 40px 40px 40px;
+  display: flex; flex-direction: column;
+  justify-content: center;
+}
+.scene.active { opacity: 1; pointer-events: all; }
+
+/* FONDS IMMERSIFS POUR REMPLIR L'ESPACE VUIDE */
+.card-bg-rouge { background: radial-gradient(circle at 50% 50%, rgba(212,43,43,0.15) 0%, var(--bg) 100%); }
+.card-bg-bleu { background: radial-gradient(circle at 50% 50%, rgba(26,107,181,0.15) 0%, var(--bg) 100%); }
+.card-bg-marine { background: radial-gradient(circle at 50% 50%, rgba(27,45,91,0.3) 0%, var(--bg) 100%); }
+.card-bg-vert { background: radial-gradient(circle at 50% 50%, rgba(46,158,86,0.15) 0%, var(--bg) 100%); }
+
+/* ── PROGRESS BAR ── */
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 5px;
+  background: linear-gradient(90deg, var(--rouge), var(--bleu), var(--vert));
+  width: 0%; z-index: 1000; transition: none;
+}
+#progress-bar.filling { transition: width linear; }
+
+/* ── GADGETS & CONTROLS ── */
+#controls {
+  position: fixed; bottom: 24px; right: 24px;
+  display: flex; gap: 10px; z-index: 1000;
+}
+.ctrl-btn {
+  padding: 10px 18px; border-radius: 50px;
+  border: 1.5px solid var(--border);
+  background: rgba(120, 120, 120, 0.15); color: var(--white);
+  font-family: 'Sora', sans-serif; font-size: 0.75rem;
+  font-weight: 700; cursor: pointer; backdrop-filter: blur(8px);
+  user-select: none; transition: all 0.2s;
+}
+.ctrl-btn:hover { transform: scale(1.05); background: rgba(120, 120, 120, 0.25); }
+
+#top-gadgets {
+  position: fixed; top: 16px; right: 24px;
+  display: flex; align-items: center; gap: 10px; z-index: 1000;
+}
+.gadget-pill {
+  padding: 6px 14px; border-radius: 30px;
+  background: rgba(120, 120, 120, 0.12); border: 1px solid var(--border);
+  font-family: 'Sora', sans-serif; font-size: 0.65rem; font-weight: 700;
+  color: var(--white); backdrop-filter: blur(6px);
+}
+
+/* ── DOTS & LABELS ── */
+#scene-dots {
+  position: fixed; bottom: 32px; left: 50%;
+  transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 1000;
+}
+.s-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--border);
+  transition: all 0.3s; cursor: pointer;
+}
+.s-dot.active { background: var(--white); transform: scale(1.5); }
+
+#scene-label {
+  position: fixed; bottom: 30px; left: 24px;
+  font-family: 'Sora', sans-serif; font-size: 0.7rem; font-weight: 800;
+  color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; z-index: 1000;
+}
+
+/* ── BANNIÈRES VISUELLES GLOBALES ── */
+.visual-banner {
+  position: fixed; top: 0; left: 0; width: 100%;
+  padding: 12px 40px; font-family: 'Sora', sans-serif;
+  font-size: 0.7rem; font-weight: 900; letter-spacing: 2px;
+  text-transform: uppercase; z-index: 999; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+.bg-banner-rouge { background: linear-gradient(90deg, var(--rouge), transparent); color: #FFF; }
+.bg-banner-bleu { background: linear-gradient(90deg, var(--bleu), transparent); color: #FFF; }
+.bg-banner-marine { background: linear-gradient(90deg, var(--marine), transparent); color: #FFF; }
+.bg-banner-vert { background: linear-gradient(90deg, var(--vert), transparent); color: #FFF; }
+
+/* ════════════════════════════
+   MOTEUR D'ANIMATION DE TEXTE
+════════════════════════════ */
+.word-anim .word {
+  display: inline-block; opacity: 0; transform: translateY(6px);
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.word-anim .word.visible { opacity: 1; transform: translateY(0); }
+
+.line-anim {
+  display: block; opacity: 0; transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.line-anim.visible { opacity: 1; transform: translateY(0); }
+
+/* ════════════════════════════
+   SCENE 0 — ACCUEIL MARQUE
+════════════════════════════ */
+#s0 { text-align: center; max-width: 900px; margin: 0 auto; }
+.s0-signature {
+  font-family: 'Sora', sans-serif; font-size: 1.2rem; font-weight: 900;
+  color: var(--vert); letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 8px; opacity: 0; transform: translateY(-12px); transition: all 0.5s ease;
+}
+.s0-signature.visible { opacity: 1; transform: translateY(0); }
+.s0-eyebrow {
+  font-family: 'Sora', sans-serif; font-size: 0.85rem; font-weight: 800;
+  color: #FFA0A0; opacity: 0; transform: translateY(10px);
+  transition: all 0.5s ease; margin-bottom: 24px; letter-spacing: 2px; text-transform: uppercase;
+}
+body.light-theme .s0-eyebrow { color: var(--rouge); }
+.s0-eyebrow.visible { opacity: 1; transform: translateY(0); }
+.s0-title { font-family: 'Sora', sans-serif; font-size: 3.5rem; font-weight: 900; line-height: 1.15; }
+.s0-title .line2 {
+  background: linear-gradient(90deg, var(--rouge), var(--bleu));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; display: block;
+}
+.s0-sub { font-size: 1.2rem; color: var(--text-muted); margin: 24px auto 0 auto; max-width: 600px; line-height: 1.5; }
+.s0-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 32px; }
+.pill { padding: 10px 20px; border-radius: 50px; font-family: 'Sora', sans-serif; font-size: 0.8rem; font-weight: 700; color:#fff; opacity: 0; transform: scale(0.9); transition: all 0.4s ease; }
+.pill.visible { opacity: 1; transform: scale(1); }
+.pill-r { background: var(--rouge); }
+.pill-b { background: var(--bleu); }
+.pill-m { background: var(--marine); }
+
+/* ════════════════════════════
+   DISPOSITION LARGE (PC / COMPACT MOBILE)
+════════════════════════════ */
+.card-scene {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 40px;
+  align-items: center;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+.card-left-box { display: flex; flex-direction: column; gap: 16px; }
+.card-num { font-family: 'Sora', sans-serif; font-size: 5rem; font-weight: 900; line-height: 1; opacity: 0; transition: opacity 0.4s; }
+.card-num.visible { opacity: 1; }
+.card-badge { align-self: flex-start; padding: 8px 16px; border-radius: 8px; font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 800; color:#fff; opacity: 0; transform: translateX(-15px); transition: all 0.4s ease; }
+.card-badge.visible { opacity: 1; transform: translateX(0); }
+.card-tagline { font-family: 'Sora', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0; transition: opacity 0.4s; }
+.card-tagline.visible { opacity: 1; }
+.card-title { font-family: 'Sora', sans-serif; font-size: 2.2rem; font-weight: 800; line-height: 1.2; }
+.divider { height: 4px; border-radius: 2px; width: 0; transition: width 0.4s ease; margin: 12px 0; }
+.divider.visible { width: 60px; }
+
+.items-list { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.item-row { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border); }
+.item-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; opacity: 0; transition: opacity 0.3s; }
+.item-icon.visible { opacity: 1; }
+.item-text h3 { font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+.item-text p { font-size: 0.88rem; color: var(--text-muted); line-height: 1.4; }
+
+.c-rouge .card-num { color: rgba(212,43,43,0.25); }
+.c-rouge .card-badge { background: var(--rouge); }
+.c-rouge .card-tagline { color: var(--rouge); }
+.c-rouge .item-icon { background: rgba(212,43,43,0.15); }
+.c-bleu .card-num { color: rgba(26,107,181,0.25); }
+.c-bleu .card-badge { background: var(--bleu); }
+.c-bleu .card-tagline { color: var(--bleu); }
+.c-bleu .item-icon { background: rgba(26,107,181,0.15); }
+.c-marine .card-num { color: rgba(140,159,204,0.25); }
+.c-marine .card-badge { background: var(--marine); }
+.c-marine .card-tagline { color: #7A8EB8; }
+.c-marine .item-icon { background: rgba(27,45,91,0.15); }
+
+/* ── SCENE 4 — COMPÉTENCES RESPONSIVE ── */
+.comp-scene { max-width: 1000px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+.comp-header { text-align: center; }
+.comp-header .eyebrow { font-family: 'Sora', sans-serif; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--vert); opacity: 0; transition: opacity 0.4s; }
+.comp-header .eyebrow.visible { opacity: 1; }
+.comp-header h2 { font-family: 'Sora', sans-serif; font-size: 2.2rem; font-weight: 900; margin-top: 4px; }
+.comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
+.comp-item { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border); }
+.comp-item-icon { width: 46px; height: 46px; border-radius: 10px; background: rgba(46,158,86,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; opacity: 0; transition: opacity 0.3s; }
+.comp-item-icon.visible { opacity: 1; }
+.comp-item h3 { font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--vert); margin-bottom: 4px; }
+.comp-item p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+
+/* ── SCENE 5 — VUE GLOBALE CARD CORRIGÉE ── */
+.global-scene { max-width: 900px; width: 100%; margin: 0 auto; }
+.map-container { display: flex; flex-direction: column; gap: 12px; width: 100%; align-items: center; }
+.map-center {
+  width: 100%; max-width: 450px; padding: 16px; border-radius: 12px;
+  background: var(--card-bg); border: 1.5px solid var(--border);
+  text-align: center; opacity: 0; transform: scale(0.96); transition: all 0.4s ease;
+}
+.map-center.visible { opacity: 1; transform: scale(1); }
+.mc-label { font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; }
+.mc-sub { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+.map-node { width: 100%; max-width: 550px; }
+.map-node-inner { border-radius: 8px; padding: 10px 16px; font-family: 'Sora', sans-serif; font-size: 0.95rem; font-weight: 700; color:#fff; opacity: 0; transform: translateY(6px); transition: all 0.35s; }
+.map-node-inner.visible { opacity: 1; transform: translateY(0); }
+.map-sub { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.map-sub-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; background: var(--card-bg); border:1px solid var(--border); opacity: 0; transition: opacity 0.3s; }
+.map-sub-item.visible { opacity: 1; }
+.dot { width: 5px; height: 5px; border-radius: 50%; }
+
+/* ── SCENE 6 — CONCLUSION CENTRÉE ET LARGE ── */
+#s6 { text-align: center; max-width: 800px; margin: 0 auto; }
+.cta-label { font-family: 'Sora', sans-serif; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--vert); margin-bottom: 12px; opacity: 0; transition: opacity 0.4s; letter-spacing: 2px; }
+.cta-label.visible { opacity: 1; }
+.cta-question { font-family: 'Sora', sans-serif; font-size: 2.4rem; font-weight: 900; margin-bottom: 18px; line-height: 1.2; }
+.cta-desc { font-size: 1.1rem; color: var(--text-muted); max-width: 550px; margin: 0 auto 28px auto; line-height: 1.5; }
+.cta-btns { display: flex; justify-content: center; width: 100%; }
+.cta-btn { padding: 16px 32px; border-radius: 50px; font-family: 'Sora', sans-serif; font-size: 0.95rem; font-weight: 800; color: #fff; background: var(--vert); border: none; display: flex; align-items: center; justify-content: center; gap: 8px; opacity: 0; transform: scale(0.95); transition: all 0.4s ease; cursor: pointer; box-shadow: 0 6px 20px rgba(46,158,86,0.3); }
+.cta-btn.visible { opacity: 1; transform: scale(1); }
+.cta-comment { margin-top: 24px; font-size: 0.85rem; color: var(--text-muted); opacity: 0; transition: opacity 0.4s; letter-spacing: 0.5px; }
+
+/* ── MEDIA QUERIES : ADAPTATION SI MOBILE PETIT ÉCRAN ── */
+@media (max-width: 768px) {
+  .scene { padding: 70px 20px 80px 20px; }
+  .s0-title { font-size: 2rem; }
+  .s0-sub { font-size: 0.9rem; }
+  .card-scene { grid-template-columns: 1fr; gap: 16px; }
+  .card-num { font-size: 3rem; }
+  .card-title { font-size: 1.3rem; }
+  .comp-grid { grid-template-columns: 1fr; }
+  .cta-question { font-size: 1.5rem; }
+  .cta-desc { font-size: 0.9rem; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="scene-label">TCF &amp; TEF avec Shekinah</div>
+<div id="scene-dots"></div>
+
+<div id="top-gadgets">
+  <div class="gadget-pill" id="gadget-timer">Grand Écran Optimisé</div>
+  <div class="ctrl-btn" style="padding: 6px 12px; font-size:0.65rem;" onclick="toggleTheme()">🌓 Mode</div>
+</div>
+
+<div id="controls">
+  <div class="ctrl-btn" id="btn-playpause" onclick="togglePlay()">▶ Lancer</div>
+  <div class="ctrl-btn" onclick="prevScene()">◀</div>
+  <div class="ctrl-btn" onclick="nextScene()">▶</div>
+  <div class="ctrl-btn" onclick="restart()">↺</div>
+</div>
+
+<!-- ══ S0 ACCUEIL MARQUE ══ -->
+<div class="scene active" id="s0">
+  <div class="s0-signature">Shekinah Orielle</div>
+  <div class="s0-eyebrow">Capsule 1 · La Clé du Succès</div>
+  <div class="s0-title">
+    <span class="line1 line-anim" data-text="Tests Officiels"></span>
+    <span class="line2 line-anim" data-text="de Français"></span>
+  </div>
+  <div class="s0-sub word-anim" data-text="Comprendre les structures pour maximiser votre score final."></div>
+  <div class="s0-pills">
+    <div class="pill pill-r">TCF Canada</div>
+    <div class="pill pill-b">TCF Québec</div>
+    <div class="pill pill-m">TEF</div>
+  </div>
+</div>
+
+<!-- ══ S1 TCF CANADA ══ -->
+<div class="scene card-bg-rouge" id="s1">
+  <div class="visual-banner bg-banner-rouge">🛑 FOCUS IMMIGRATION FÉDÉRALE</div>
+  <div class="card-scene c-rouge">
+    <div class="card-left-box">
+      <div class="card-num">1</div>
+      <div class="card-badge">🍁 TCF Canada</div>
+      <div class="card-tagline">Bassin Fédéral</div>
+      <div class="card-title line-anim" data-text="Pour rejoindre le Canada fédéral"></div>
+      <div class="divider" style="background:var(--rouge)"></div>
+    </div>
+    <div class="items-list">
+      <div class="item-row">
+        <div class="item-icon">🛂</div>
+        <div class="item-text">
+          <h3 class="line-anim" data-text="Entrée Express"></h3>
+          <p class="word-anim" data-text="Essentiel pour maximiser vos points dans le bassin fédéral."></p>
+        </div>
+      </div>
+      <div class="item-row">
+        <div class="item-icon">📋</div>
+        <div class="item-text">
+          <h3 class="line-anim" data-text="Dossier Administratif"></h3>
+          <p class="word-anim" data-text="Preuve de compétences linguistique requise par les autorités."></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S2 TCF QUÉBEC ══ -->
+<div class="scene card-bg-bleu" id="s2">
+  <div class="visual-banner bg-banner-bleu">🏛️ INTÉGRATION PROVINCIALE QUÉBEC</div>
+  <div class="card-scene c-bleu">
+    <div class="card-left-box">
+      <div class="card-num">2</div>
+      <div class="card-badge">🏛️ TCF Québec</div>
+      <div class="card-tagline">Sélection Provinciale</div>
+      <div class="card-title line-anim" data-text="S'installer durablement au Québec"></div>
+      <div class="divider" style="background:var(--bleu)"></div>
+    </div>
+    <div class="items-list">
+      <div class="item-row">
+        <div class="item-icon">💼</div>
+        <div class="item-text">
+          <h3 class="line-anim" data-text="Marché du Travail"></h3>
+          <p class="word-anim" data-text="Démontrer une aisance fluide en milieu professionnel local."></p>
+        </div>
+      </div>
+      <div class="item-row">
+        <div class="item-icon">🤝</div>
+        <div class="item-text">
+          <h3 class="line-anim" data-text="Vie Sociale"></h3>
+          <p class="word-anim" data-text="Ancrer son projet d'avenir au cœur de la francophonie québécoise."></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S3 TEF ══ -->
+<div class="scene card-bg-marine" id="s3">
+  <div class="visual-banner bg-banner-marine">📖 STANDARD INTERNATIONAL ET ACADÉMIQUE</div>
+  <div class="card-scene c-marine">
+    <div class="card-left-box">
+      <div class="card-num">3</div>
+      <div class="card-badge">📖 TEF</div>
+      <div class="card-tagline">Monde Entier</div>
+      <div class="card-title line-anim" data-text="Grandes Écoles &amp; Carrière Élite"></div>
+      <div class="divider" style="background:#8C9FCC"></div>
+    </div>
+    <div class="items-list">
+      <div class="item-row">
+        <div class="item-icon">🎓</div>
+        <div class="item-text">
+          <h3 class="line-anim" data-text="Universités"></h3>
+          <p class="word-anim" data-text="Validation académique ultra-rigoureuse reconnue mondialement."></p>
+        </div>
+      </div>
+      <div class="item-row">
+        <div class="item-icon">🎯</div>
+        <div class="item-text">
+          <h3 class="line-anim" data-text="Rigueur Globale"></h3>
+          <p class="word-anim" data-text="Évaluation pointue et précise pour les profils hautement qualifiés."></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S4 COMPÉTENCES ══ -->
+<div class="scene card-bg-vert" id="s4">
+  <div class="visual-banner bg-banner-vert">⚡ LE SOCLE COMMUN DE VOTRE SUCCÈS</div>
+  <div class="comp-scene">
+    <div class="comp-header">
+      <div class="eyebrow">Les Épreuves Clés</div>
+      <h2 class="line-anim" data-text="4 compétences validées"></h2>
+    </div>
+    <div class="comp-grid">
+      <div class="comp-item">
+        <div class="comp-item-icon">🎧</div>
+        <div>
+          <h3 class="line-anim" data-text="Compréhension (Orale &amp; Écrite)"></h3>
+          <p class="word-anim" data-text="Capter instantanément les nuances des documents, dialogues et médias complexes."></p>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-item-icon">🗣️</div>
+        <div>
+          <h3 class="line-anim" data-text="Expression (Orale &amp; Écrite)"></h3>
+          <p class="word-anim" data-text="Structurer et rédiger un argumentaire fluide, clair et convaincant face aux examinateurs."></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S5 VUE GLOBALE ══ -->
+<div class="scene" id="s5">
+  <div class="visual-banner bg-banner-vert">🗺️ SYNTHÈSE GRAPHIQUE DES OBJECTIFS</div>
+  <div class="global-scene">
+    <div class="map-container">
+      <div class="map-center">
+        <div class="mc-label">Cartographie des Tests</div>
+        <div class="mc-sub">Votre plan d'attaque avec Shekinah</div>
+      </div>
+      <div class="map-node mn-rouge">
+        <div class="map-node-inner line-anim" data-text="🍁 TCF Canada (Fédéral)"></div>
+        <div class="map-sub">
+          <div class="map-sub-item"><span class="dot"></span>Immigration Express</div>
+        </div>
+      </div>
+      <div class="map-node mn-bleu">
+        <div class="map-node-inner line-anim" data-text="🏛️ TCF Québec (Provincial)"></div>
+        <div class="map-sub">
+          <div class="map-sub-item"><span class="dot"></span>Intégration Locale</div>
+        </div>
+      </div>
+      <div class="map-node mn-marine">
+        <div class="map-node-inner line-anim" data-text="📖 TEF (Polyvalent)"></div>
+        <div class="map-sub">
+          <div class="map-sub-item"><span class="dot"></span>Grandes Études &amp; Pro</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S6 CONCLUSION ══ -->
+<div class="scene card-bg-vert" id="s6">
+  <div class="visual-banner bg-banner-vert">🚀 PASSEZ À L'ACTION MAINTENANT</div>
+  <div class="cta-label">Fin de la Capsule 1</div>
+  <div class="cta-question line-anim" data-text="Votre avenir dépend de votre préparation."></div>
+  <div class="cta-desc word-anim" data-text="Ne laissez pas votre score au hasard. Rejoignez l'accompagnement d'élite de Shekinah Orielle pour réussir dès votre premier essai."></div>
+  <div class="cta-btns">
+    <button class="cta-btn">🚀 Commencer ma préparation</button>
+  </div>
+  <div class="cta-comment">👇 Écrivez <strong>"PRÊT"</strong> en commentaire pour vous lancer !</div>
+</div>
+
+<script>
+/* MOTEUR DE TEXTE */
+function prepareTextAnimations() {
+  document.querySelectorAll('.word-anim').forEach(el => {
+    const text = el.getAttribute('data-text') || el.textContent;
+    el.innerHTML = '';
+    text.split(' ').forEach((word, i) => {
+      const span = document.createElement('span');
+      span.className = 'word';
+      span.textContent = word;
+      if (i > 0) el.appendChild(document.createTextNode(' '));
+      el.appendChild(span);
+    });
+  });
+  document.querySelectorAll('.line-anim').forEach(el => {
+    if(!el.textContent.trim()) el.textContent = el.getAttribute('data-text') || '';
+  });
+}
+prepareTextAnimations();
+
+function animateWords(el, startDelay = 0, speed = 35) {
+  if (!el) return;
+  el.querySelectorAll('.word').forEach((w, i) => {
+    setTimeout(() => w.classList.add('visible'), startDelay + (i * speed));
+  });
+}
+
+function resetScene(sceneEl) {
+  sceneEl.querySelectorAll('.word, .line-anim').forEach(el => el.classList.remove('visible'));
+  sceneEl.querySelectorAll('.card-num, .card-badge, .card-tagline, .divider, .item-icon').forEach(el => el.classList.remove('visible'));
+  sceneEl.querySelectorAll('.s0-signature, .s0-eyebrow, .pill').forEach(el => el.classList.remove('visible'));
+  sceneEl.querySelectorAll('.comp-header .eyebrow, .comp-item-icon').forEach(el => el.classList.remove('visible'));
+  sceneEl.querySelectorAll('.map-center, .map-node-inner, .map-sub-item').forEach(el => el.classList.remove('visible'));
+  sceneEl.querySelectorAll('.cta-label, .cta-btn, .cta-comment').forEach(el => el.classList.remove('visible'));
+}
+
+function runSceneAnim(id) {
+  const el = document.getElementById(id);
+  if (id === 's0') {
+    setTimeout(() => el.querySelector('.s0-signature')?.classList.add('visible'), 50);
+    setTimeout(() => el.querySelector('.s0-eyebrow')?.classList.add('visible'), 200);
+    setTimeout(() => el.querySelector('.line1')?.classList.add('visible'), 400);
+    setTimeout(() => el.querySelector('.line2')?.classList.add('visible'), 700);
+    setTimeout(() => animateWords(el.querySelector('.s0-sub'), 0, 40), 950);
+    el.querySelectorAll('.pill').forEach((p, i) => { setTimeout(() => p.classList.add('visible'), 1400 + (i * 80)); });
+  } 
+  else if (id === 's1' || id === 's2' || id === 's3') {
+    setTimeout(() => el.querySelector('.card-num')?.classList.add('visible'), 50);
+    setTimeout(() => el.querySelector('.card-badge')?.classList.add('visible'), 120);
+    setTimeout(() => el.querySelector('.card-tagline')?.classList.add('visible'), 220);
+    setTimeout(() => el.querySelector('.card-title')?.classList.add('visible'), 320);
+    setTimeout(() => el.querySelector('.divider')?.classList.add('visible'), 450);
+    el.querySelectorAll('.item-row').forEach((row, i) => {
+      const delayBase = 550 + (i * 200);
+      setTimeout(() => row.querySelector('.item-icon')?.classList.add('visible'), delayBase);
+      setTimeout(() => row.querySelector('h3')?.classList.add('visible'), delayBase + 50);
+      setTimeout(() => animateWords(row.querySelector('p'), 0, 30), delayBase + 100);
+    });
+  } 
+  else if (id === 's4') {
+    setTimeout(() => el.querySelector('.comp-header .eyebrow')?.classList.add('visible'), 80);
+    setTimeout(() => el.querySelector('.comp-header h2')?.classList.add('visible'), 200);
+    el.querySelectorAll('.comp-item').forEach((item, i) => {
+      const delayBase = 450 + (i * 180);
+      setTimeout(() => item.querySelector('.comp-item-icon')?.classList.add('visible'), delayBase);
+      setTimeout(() => item.querySelector('h3')?.classList.add('visible'), delayBase + 50);
+      setTimeout(() => animateWords(item.querySelector('p'), 0, 35), delayBase + 100);
+    });
+  } 
+  else if (id === 's5') {
+    setTimeout(() => el.querySelector('.map-center')?.classList.add('visible'), 150);
+    el.querySelectorAll('.map-node').forEach((node, i) => {
+      const delayBase = 450 + (i * 180);
+      setTimeout(() => node.querySelector('.map-node-inner')?.classList.add('visible'), delayBase);
+      node.querySelectorAll('.map-sub-item').forEach((sub, j) => {
+        setTimeout(() => sub.classList.add('visible'), delayBase + 100 + (j * 50));
+      });
+    });
+  } 
+  else if (id === 's6') {
+    setTimeout(() => el.querySelector('.cta-label')?.classList.add('visible'), 80);
+    setTimeout(() => el.querySelector('.cta-question')?.classList.add('visible'), 200);
+    setTimeout(() => animateWords(el.querySelector('.cta-desc'), 0, 30), 450);
+    setTimeout(() => el.querySelector('.cta-btn')?.classList.add('visible'), 1100);
+    setTimeout(() => el.querySelector('.cta-comment')?.classList.add('visible'), 1300);
+  }
+}
+
+/* INTERACTIVITÉ ACCRUE */
+const SCENES = ['s0','s1','s2','s3','s4','s5','s6'];
+const LABELS = ['Shekinah Orielle','TCF Canada','TCF Québec','TEF','Compétences','Vue Globale','Succès'];
+const DURATIONS = [4500, 5500, 5500, 5500, 5500, 5800, 6500];
+
+let cur = 0, playing = false, autoTimer = null;
+
+const bar = document.getElementById('progress-bar');
+const labelEl = document.getElementById('scene-label');
+const dotsEl = document.getElementById('scene-dots');
+const playBtn = document.getElementById('btn-playpause');
+const timerGadget = document.getElementById('gadget-timer');
+
+SCENES.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 's-dot' + (i===0?' active':'');
+  d.onclick = () => jumpTo(i);
+  dotsEl.appendChild(d);
+});
+
+function toggleTheme() { document.body.classList.toggle('light-theme'); }
+
+function showScene(idx) {
+  SCENES.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (i !== idx) { el.classList.remove('active'); setTimeout(() => resetScene(el), 500); }
+  });
+  const active = document.getElementById(SCENES[idx]);
+  active.classList.add('active');
+  setTimeout(() => runSceneAnim(SCENES[idx]), 50);
+
+  document.querySelectorAll('.s-dot').forEach((d,j) => d.classList.toggle('active', j===idx));
+  labelEl.textContent = idx === 0 || idx === 6 ? "TCF & TEF avec Shekinah" : LABELS[idx];
+  timerGadget.textContent = playing ? `Lecture auto : ${LABELS[idx]}` : `Étape ${idx + 1} / 7`;
+
+  bar.classList.remove('filling');
+  bar.style.width = '0%';
+  void bar.offsetWidth;
+  if (playing) {
+    bar.style.transitionDuration = DURATIONS[idx] + 'ms';
+    bar.classList.add('filling');
+    requestAnimationFrame(() => { bar.style.width = '100%'; });
+  }
+}
+
+function scheduleNext() {
+  clearTimeout(autoTimer);
+  if (!playing) return;
+  autoTimer = setTimeout(() => {
+    if (cur < SCENES.length - 1) { cur++; showScene(cur); scheduleNext(); }
+    else { playing = false; playBtn.textContent = '▶ Lancer'; timerGadget.textContent = "Fin de l'aperçu"; }
+  }, DURATIONS[cur]);
+}
+
+function jumpTo(idx) { clearTimeout(autoTimer); cur=idx; showScene(cur); if(playing) scheduleNext(); }
+function nextScene() { clearTimeout(autoTimer); if(cur<SCENES.length-1){cur++;showScene(cur);if(playing)scheduleNext();} }
+function prevScene() { clearTimeout(autoTimer); if(cur>0){cur--;showScene(cur);if(playing)scheduleNext();} }
+
+function togglePlay() {
+  playing = !playing; 
+  playBtn.textContent = playing ? '⏸ Pause' : '▶ Lancer';
+  if (playing) { if(cur >= SCENES.length - 1) cur = 0; showScene(cur); scheduleNext(); } 
+  else { clearTimeout(autoTimer); bar.classList.remove('filling'); bar.style.width = '0%'; timerGadget.textContent = "En pause"; }
+}
+
+function restart() { clearTimeout(autoTimer); cur=0; playing=true; playBtn.textContent='⏸ Pause'; showScene(cur); scheduleNext(); }
+
+showScene(0);
+</script>
+</body>
+</html>
